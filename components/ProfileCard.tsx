@@ -67,6 +67,31 @@ const BG_PRESETS: { label: string; from: string; to: string }[] = [
   { label: 'Ember', from: '#fde68a', to: '#fdba74' },
 ]
 
+function friendlyStreakError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : typeof err === 'string' ? err : ''
+  const msg = raw.toLowerCase()
+
+  // Wallet / user behavior: Metamask/Wagmi often throws these when user cancels.
+  if (msg.includes('rejected') || msg.includes('user rejected')) {
+    return 'Signature rejected. No XP awarded.'
+  }
+
+  // Server-side verification failures.
+  if (msg.includes('invalid signature')) {
+    return 'Invalid signature. Please try again.'
+  }
+
+  if (msg.includes('signature required')) {
+    return 'Please sign the streak message in your wallet.'
+  }
+
+  if (msg.includes('already claimed today')) {
+    return 'Already claimed today.'
+  }
+
+  return raw || 'Claim failed'
+}
+
 export function ProfileCard() {
   const { address, isConnecting, isConnected } = useAccount()
   const loginState = useLoginWithAbstract()
@@ -225,7 +250,7 @@ export function ProfileCard() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setStreakError(data?.error ?? 'Claim failed')
+        setStreakError(friendlyStreakError(data?.error))
         return
       }
       setStreak(data.streak ?? streak)
@@ -240,7 +265,7 @@ export function ProfileCard() {
       }
       setProfileStatus((prev) => (prev ? { ...prev, xp: data.totalXp } : prev))
     } catch (e) {
-      setStreakError(e instanceof Error ? e.message : 'Claim failed')
+      setStreakError(friendlyStreakError(e))
     } finally {
       setStreakClaiming(false)
     }
