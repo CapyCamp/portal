@@ -83,6 +83,7 @@ type BadgeStatusResponse = {
 export default function BadgesPage() {
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
+  const BADGES_COMING_SOON = true
   const [selectedBadge, setSelectedBadge] = useState<number | null>(null)
   const [earned, setEarned] = useState<boolean[]>(() => Array.from({ length: BADGE_COUNT }, () => false))
   const [claimed, setClaimed] = useState<boolean[]>(() => Array.from({ length: BADGE_COUNT }, () => false))
@@ -91,6 +92,7 @@ export default function BadgesPage() {
   const [claimStatus, setClaimStatus] = useState<string | null>(null)
 
   useEffect(() => {
+    if (BADGES_COMING_SOON) return
     if (!address) {
       setEarned(Array.from({ length: BADGE_COUNT }, () => false))
       setClaimed(Array.from({ length: BADGE_COUNT }, () => false))
@@ -228,7 +230,28 @@ export default function BadgesPage() {
     }
   }
 
-  return (
+  const maintenanceUI = (
+    <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-16">
+      <div className="flex max-w-sm flex-col items-center gap-4 rounded-2xl border-2 border-slate-200 bg-slate-50/80 px-8 py-12 text-center opacity-70 grayscale">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200/80">
+          <Lock className="h-8 w-8 text-slate-500" strokeWidth={1.75} />
+        </div>
+        <h1 className="text-xl font-extrabold tracking-tight text-slate-600 sm:text-2xl">
+          Badges are being fixed
+        </h1>
+        <p className="text-sm font-medium uppercase tracking-widest text-slate-500">Coming soon</p>
+        <p className="text-sm text-slate-500">
+          Badge claiming and eligibility logic are temporarily disabled while we resolve the current issues.
+          Check back shortly.
+        </p>
+        <p className="text-xs text-slate-500">
+          {address ? 'Your badges will appear once the maintenance is complete.' : 'Connect a wallet to view badges later.'}
+        </p>
+      </div>
+    </div>
+  )
+
+  return BADGES_COMING_SOON ? maintenanceUI : (
     <div className="w-full min-h-full pb-24">
       <section className="px-6 py-8">
         <div className="mx-auto max-w-7xl space-y-6">

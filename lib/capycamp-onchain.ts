@@ -159,6 +159,7 @@ async function tokenIdsViaTransferLogsInRange(
   c: ReturnType<typeof client>,
   owner: Address,
   fromBlock: bigint,
+  toBlock: bigint | 'latest',
   limit: number,
 ): Promise<string[]> {
   const transfer = parseAbiItem(
@@ -169,7 +170,7 @@ async function tokenIdsViaTransferLogsInRange(
     event: transfer,
     args: { to: owner },
     fromBlock,
-    toBlock: 'latest',
+    toBlock,
   })
   const seen = new Set<string>()
   for (const log of logs) {
@@ -206,18 +207,30 @@ async function tokenIdsViaTransferLogsProgressive(
     const remaining = Math.max(0, limit - outSeen.size)
     if (remaining <= 0) break
 
-    const ids = await tokenIdsViaTransferLogsInRange(c, owner, fromBlock, remaining)
+    const ids = await tokenIdsViaTransferLogsInRange(c, owner, fromBlock, 'latest', remaining)
     for (const id of ids) outSeen.add(id)
 
     if (outSeen.size >= limit) break
     if (fromBlock === BigInt(0)) break
   }
 
-  // Last resort: full history to fill missing (slow but accurate).
+  // Last resort: chunk older history to avoid client-side log truncation.
   if (outSeen.size < limit) {
     const remaining = Math.max(0, limit - outSeen.size)
-    const ids = await tokenIdsViaTransferLogsInRange(c, owner, BigInt(0), remaining)
-    for (const id of ids) outSeen.add(id)
+    const chunkSize = TRANSFER_LOG_LOOKBACK_STEPS[0] ?? BigInt(250_000)
+
+    // Scan backwards in manageable chunks until we have enough unique token IDs.
+    // This can repeat work from the earlier loop, but is resilient to log truncation.
+    let endBlock = latest
+    while (outSeen.size < limit && endBlock > BigInt(0)) {
+      const startBlock = endBlock > chunkSize ? endBlock - chunkSize : BigInt(0)
+      const stillRemaining = Math.max(0, limit - outSeen.size)
+      const ids = await tokenIdsViaTransferLogsInRange(c, owner, startBlock, endBlock, stillRemaining)
+      for (const id of ids) outSeen.add(id)
+
+      if (startBlock === BigInt(0)) break
+      endBlock = startBlock - BigInt(1)
+    }
   }
 
   return Array.from(outSeen).slice(0, limit)

@@ -22,6 +22,7 @@ export default function BadgeDetailPage() {
   const slug = params?.slug
   const badge = BADGES.find((b) => b.slug === slug)
   const { address, isConnected } = useAccount()
+  const BADGES_COMING_SOON = true
   const [earned, setEarned] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -50,6 +51,29 @@ export default function BadgeDetailPage() {
       cancelled = true
     }
   }, [address, badge])
+
+  if (BADGES_COMING_SOON) {
+    return (
+      <div className="flex min-h-full w-full flex-col items-center justify-center px-6 py-16">
+        <div className="flex max-w-sm flex-col items-center gap-4 rounded-2xl border-2 border-slate-200 bg-slate-50/80 px-8 py-12 text-center opacity-70 grayscale">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200/80">
+            <Award className="h-8 w-8 text-slate-500" strokeWidth={1.75} />
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-slate-600 sm:text-2xl">
+            Badges are being fixed
+          </h1>
+          <p className="text-sm font-medium uppercase tracking-widest text-slate-500">Coming soon</p>
+          <p className="text-sm text-slate-500">
+            Badge claiming and eligibility logic are temporarily disabled while we resolve the current issues.
+            Check back shortly.
+          </p>
+          <p className="text-xs text-slate-500">
+            {isConnected ? 'Your badge updates will show once maintenance is complete.' : 'Connect a wallet later to view badges.'}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   if (!badge) {
     return (
