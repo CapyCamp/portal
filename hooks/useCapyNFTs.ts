@@ -27,6 +27,7 @@ export function useCapyNFTs() {
   const [nfts, setNfts] = useState<CapyNft[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const limit = 200
 
   useEffect(() => {
     if (!address || !isConnected) {
@@ -36,7 +37,7 @@ export function useCapyNFTs() {
     }
 
     // Seed from local cache (instant UI), then refresh from API.
-    const cacheKey = `capycamp-nfts:${address.toLowerCase()}`
+    const cacheKey = `capycamp-nfts:${address.toLowerCase()}:limit=${limit}`
     try {
       const raw = localStorage.getItem(cacheKey)
       if (raw) {
@@ -54,7 +55,7 @@ export function useCapyNFTs() {
       try {
         setLoading(true)
         setError(null)
-        const res = await fetch(`/api/nfts/${address}`, { cache: 'no-store' })
+        const res = await fetch(`/api/nfts/${address}?limit=${encodeURIComponent(String(limit))}`, { cache: 'no-store' })
         const body = await res.json()
         if (!res.ok) {
           throw new Error(body?.error || 'Failed to fetch CapyCamp NFTs')

@@ -52,13 +52,13 @@ function bareCapyNft(
   }
 }
 
-function capycampFromNfts(nfts: OpenSeaNft[]): CapyNft[] {
+function capycampFromNfts(nfts: OpenSeaNft[], limit: number): CapyNft[] {
   return nfts
     .filter(
       (nft) =>
         nft?.contract?.address?.toLowerCase() === CAPYCAMP_CONTRACT.toLowerCase(),
     )
-    .slice(0, 20)
+    .slice(0, limit)
     .map((nft) =>
       bareCapyNft(
         nft.identifier,
@@ -72,10 +72,11 @@ function capycampFromNfts(nfts: OpenSeaNft[]): CapyNft[] {
 export async function fetchCapycampersFromOpenSea(
   owner: string,
   apiKey: string,
-  options: { revalidateSeconds?: number } = {},
+  options: { revalidateSeconds?: number; limit?: number } = {},
 ): Promise<CapyNft[]> {
   const chain = getOpenSeaChain()
   const revalidate = options.revalidateSeconds ?? 60
+  const limit = options.limit ?? 20
   const collected: OpenSeaNft[] = []
   let url: string | null =
     `https://api.opensea.io/api/v2/chain/${chain}/account/${encodeURIComponent(owner)}/nfts?limit=200`
@@ -93,15 +94,15 @@ export async function fetchCapycampersFromOpenSea(
     const page: OpenSeaNft[] = Array.isArray(json?.nfts) ? json.nfts : []
     collected.push(...page)
 
-    const capy = capycampFromNfts(collected)
-    if (capy.length >= 20) return capy.slice(0, 20)
+    const capy = capycampFromNfts(collected, limit)
+    if (capy.length >= limit) return capy.slice(0, limit)
 
     const nextUrl: string | undefined = json?.next
     if (!nextUrl || typeof nextUrl !== 'string') break
     url = nextUrl.startsWith('http') ? nextUrl : `https://api.opensea.io${nextUrl}`
   }
 
-  return capycampFromNfts(collected)
+  return capycampFromNfts(collected, limit)
 }
 
 /** Ownership check: wallet holds this token on CapyCamp contract (same chain) */

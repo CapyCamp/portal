@@ -12,9 +12,11 @@ export async function GET(req: Request) {
   }
 
   const chain = getOpenSeaChain()
+  const requestedLimit = Number(requestUrl.searchParams.get('limit') ?? 200)
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(requestedLimit, 500)) : 200
 
   try {
-    const nfts = await getCapyCampNftsForOwner(address, { limit: 20 })
+    const nfts = await getCapyCampNftsForOwner(address, { limit })
 
     const openseaKey = process.env.OPENSEA_API_KEY
     let source = 'rpc'

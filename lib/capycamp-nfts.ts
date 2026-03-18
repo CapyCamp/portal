@@ -103,11 +103,11 @@ export async function getCapyCampNftsForOwner(
   const alchemyKey = process.env.ALCHEMY_API_KEY
   const chain = getOpenSeaChain()
 
-  const onchain = await fetchCapycampersOnChain(owner)
+  const onchain = await fetchCapycampersOnChain(owner, limit)
   let opensea: CapyNft[] = []
   if (openseaKey) {
     try {
-      opensea = await fetchCapycampersFromOpenSea(owner, openseaKey)
+      opensea = await fetchCapycampersFromOpenSea(owner, openseaKey, { limit })
     } catch {
       // optional
     }

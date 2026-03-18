@@ -132,10 +132,15 @@ async function metadataFromTokenUri(tokenId: string): Promise<CapyNft> {
   }
 }
 
-async function tokenIdsViaEnumerable(c: ReturnType<typeof client>, owner: Address, balance: bigint): Promise<string[]> {
+async function tokenIdsViaEnumerable(
+  c: ReturnType<typeof client>,
+  owner: Address,
+  balance: bigint,
+  limit: number,
+): Promise<string[]> {
   const n = Number(balance)
   if (n <= 0) return []
-  const max = Math.min(n, 20)
+  const max = Math.min(n, limit)
   const tokenIds: string[] = []
   for (let i = 0; i < max; i++) {
     const id = await c.readContract({
@@ -154,6 +159,7 @@ async function tokenIdsViaTransferLogsInRange(
   c: ReturnType<typeof client>,
   owner: Address,
   fromBlock: bigint,
+  limit: number,
 ): Promise<string[]> {
   const transfer = parseAbiItem(
     'event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)',
@@ -182,29 +188,45 @@ async function tokenIdsViaTransferLogsInRange(
     } catch {
       /* burned */
     }
+    if (seen.size >= limit) break
   }
-  return Array.from(seen).slice(0, 20)
+  return Array.from(seen).slice(0, limit)
 }
 
 async function tokenIdsViaTransferLogsProgressive(
   c: ReturnType<typeof client>,
   owner: Address,
+  limit: number,
 ): Promise<string[]> {
   const latest = await c.getBlockNumber()
+  const outSeen = new Set<string>()
+
   for (const lookback of TRANSFER_LOG_LOOKBACK_STEPS) {
     const fromBlock = latest > lookback ? latest - lookback : BigInt(0)
-    const ids = await tokenIdsViaTransferLogsInRange(c, owner, fromBlock)
-    if (ids.length > 0) return ids
+    const remaining = Math.max(0, limit - outSeen.size)
+    if (remaining <= 0) break
+
+    const ids = await tokenIdsViaTransferLogsInRange(c, owner, fromBlock, remaining)
+    for (const id of ids) outSeen.add(id)
+
+    if (outSeen.size >= limit) break
     if (fromBlock === BigInt(0)) break
   }
-  // Last resort: full history (slow but accurate). Only reached if prior windows found nothing.
-  return await tokenIdsViaTransferLogsInRange(c, owner, BigInt(0))
+
+  // Last resort: full history to fill missing (slow but accurate).
+  if (outSeen.size < limit) {
+    const remaining = Math.max(0, limit - outSeen.size)
+    const ids = await tokenIdsViaTransferLogsInRange(c, owner, BigInt(0), remaining)
+    for (const id of ids) outSeen.add(id)
+  }
+
+  return Array.from(outSeen).slice(0, limit)
 }
 
 /**
  * List CapyCamp NFTs owned by `owner` on Abstract via RPC.
  */
-export async function fetchCapycampersOnChain(ownerAddress: string): Promise<CapyNft[]> {
+export async function fetchCapycampersOnChain(ownerAddress: string, limit: number): Promise<CapyNft[]> {
   const owner = ownerAddress.toLowerCase() as Address
   const c = client()
   let tokenIds: string[] = []
@@ -217,14 +239,15 @@ export async function fetchCapycampersOnChain(ownerAddress: string): Promise<Cap
     })
     if (balance === BigInt(0)) return []
     try {
-      tokenIds = await tokenIdsViaEnumerable(c, owner, balance)
+      tokenIds = await tokenIdsViaEnumerable(c, owner, balance, limit)
     } catch {
-      tokenIds = await tokenIdsViaTransferLogsProgressive(c, owner)
+      tokenIds = await tokenIdsViaTransferLogsProgressive(c, owner, limit)
     }
     if (tokenIds.length === 0) return []
     const out: CapyNft[] = []
     for (const tokenId of tokenIds) {
-      out.push(await metadataFromTokenUri(tokenId))
+      const meta = await metadataFromTokenUri(tokenId)
+      if (meta) out.push(meta)
     }
     return out
   } catch {
