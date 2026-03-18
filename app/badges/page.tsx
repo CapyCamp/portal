@@ -6,12 +6,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { BADGES } from '@/lib/badges'
 import { Button } from '@/components/ui/button'
-import { useWalletClient } from 'wagmi'
-import { toHex } from 'viem'
-import { usePublicClient } from 'wagmi'
+import { useSignMessage } from 'wagmi'
 import { persistProfileSnapshot, readProfileSnapshot } from '@/lib/profile-local-storage'
 
 const BADGE_COUNT = 33
+const TX_NOTE_PREFIX = 'CapyCamp Badge Claim:'
 
 const BADGE_CARD_STYLES: { bg: string; border: string; ring: string; icon: string; label: string }[] = [
   { bg: 'bg-sky-50/85', border: 'border-sky-300/80', ring: 'group-hover:ring-sky-300/60', icon: 'text-sky-700', label: 'text-sky-900' },
@@ -83,15 +82,13 @@ type BadgeStatusResponse = {
 
 export default function BadgesPage() {
   const { address } = useAccount()
-  const { data: walletClient } = useWalletClient()
-  const publicClient = usePublicClient()
+  const { signMessageAsync } = useSignMessage()
   const [selectedBadge, setSelectedBadge] = useState<number | null>(null)
   const [earned, setEarned] = useState<boolean[]>(() => Array.from({ length: BADGE_COUNT }, () => false))
   const [claimed, setClaimed] = useState<boolean[]>(() => Array.from({ length: BADGE_COUNT }, () => false))
   const [claiming, setClaiming] = useState(false)
   const [claimError, setClaimError] = useState<string | null>(null)
   const [claimStatus, setClaimStatus] = useState<string | null>(null)
-  const [lastTxHash, setLastTxHash] = useState<string | null>(null)
 
   useEffect(() => {
     if (!address) {
@@ -112,6 +109,12 @@ export default function BadgesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wallet: address,
+          display_name: snap.display_name,
+          xp: typeof snap.xp === 'number' ? snap.xp : undefined,
+          pfp_image: snap.pfp_image ?? undefined,
+          pfp_rarity: snap.pfp_rarity ?? undefined,
+          profile_bg_from: snap.profile_bg_from ?? undefined,
+          profile_bg_to: snap.profile_bg_to ?? undefined,
           claimed_badges: snap.claimed_badges ?? [],
         }),
       }).catch(() => {})
@@ -157,60 +160,33 @@ export default function BadgesPage() {
   const handleClaim = async () => {
     if (selectedBadge === null || !selected || !address) return
     if (!selectedUnlocked || !selectedEarned || selectedClaimed) return
-    if (!walletClient) {
-      setClaimError('Wallet not ready')
-      return
-    }
-    if (!publicClient) {
-      setClaimError('Network client not ready')
-      return
-    }
     setClaimError(null)
     setClaimStatus(null)
-    setLastTxHash(null)
     setClaiming(true)
     try {
-      // Real on-chain tx: send a 0-value tx to self with a memo-like data payload.
-      const data = toHex(`CapyCamp Badge Claim: ${selected.slug}`)
-      const txHash = await walletClient.sendTransaction({
-        account: address as `0x${string}`,
-        to: address as `0x${string}`,
-        value: 0n,
-        data,
-      })
-      setLastTxHash(txHash)
-      setClaimStatus('Waiting for confirmation…')
+      const message = `${TX_NOTE_PREFIX}\nBadge: ${selected.slug}`
+      setClaimStatus('Signing…')
+      const signature = await signMessageAsync({ message })
 
-      // Poll the server claim endpoint until tx is mined & verified.
-      // This avoids hanging UIs when receipt waiting is flaky.
-      const startedAt = Date.now()
-      const timeoutMs = 90_000
-      let claimedOk = false
-      while (Date.now() - startedAt < timeoutMs) {
-        const res = await fetch('/api/badges/claim', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address, slug: selected.slug, txHash }),
-        })
-        const json = await res.json().catch(() => ({}))
-        if (res.ok) {
-          claimedOk = true
-          break
-        }
-        // 409 means not mined yet; keep waiting.
-        if (res.status !== 409) {
-          setClaimError(
-            (json?.error ? String(json.error) : 'Claim failed') +
-              (txHash ? ` (tx: ${String(txHash).slice(0, 10)}…)` : ''),
-          )
-          return
-        }
-        await new Promise((r) => setTimeout(r, 2000))
-      }
-      if (!claimedOk) {
-        setClaimError(`Still pending confirmation (tx: ${String(txHash).slice(0, 10)}…)`)
+      setClaimStatus('Verifying claim…')
+      const res = await fetch('/api/badges/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, slug: selected.slug, signature }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const raw = data?.error ? String(data.error) : 'Claim failed'
+        const lower = raw.toLowerCase()
+        setClaimError(
+          lower.includes('rejected') || lower.includes('user rejected')
+            ? 'Signature rejected. No badge awarded.'
+            : raw,
+        )
         return
       }
+
       setClaimStatus('Claimed!')
 
       // Persist claimed badge locally so it survives server restarts.
@@ -240,7 +216,13 @@ export default function BadgesPage() {
         setClaimed(Array.from({ length: BADGE_COUNT }, (_, i) => Boolean(status.badges?.[i]?.claimed) || localSlugs.has(BADGES[i]?.slug ?? '')))
       }
     } catch (e) {
-      setClaimError(e instanceof Error ? e.message : 'Claim failed')
+      const raw = e instanceof Error ? e.message : 'Claim failed'
+      const lower = raw.toLowerCase()
+      setClaimError(
+        lower.includes('rejected') || lower.includes('user rejected')
+          ? 'Signature rejected. No badge awarded.'
+          : raw,
+      )
     } finally {
       setClaiming(false)
     }
@@ -428,16 +410,11 @@ export default function BadgesPage() {
                       disabled={!address || claiming}
                       onClick={() => void handleClaim()}
                     >
-                      {claiming ? 'Claiming…' : 'Claim badge (Abstract tx)'}
+                      {claiming ? 'Claiming…' : 'Claim badge'}
                     </Button>
                   )}
                   {claimStatus && (
                     <p className="text-xs text-slate-600">{claimStatus}</p>
-                  )}
-                  {lastTxHash && (
-                    <p className="text-[11px] text-slate-500">
-                      Tx: <span className="font-mono">{lastTxHash.slice(0, 10)}…{lastTxHash.slice(-6)}</span>
-                    </p>
                   )}
                   {claimError && <p className="text-xs text-red-600">{claimError}</p>}
                   {selectedClaimed && (

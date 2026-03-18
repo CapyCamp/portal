@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createPublicClient, http, toHex } from 'viem'
-import { abstract } from 'viem/chains'
+import { verifyMessage } from 'viem'
 import { BADGES } from '@/lib/badges'
 import { claimBadge, hasClaimedBadge } from '@/app/api/badges/store'
 import { getDailyClaim } from '@/app/api/rewards/store'
@@ -16,11 +15,9 @@ function isValidTxHash(h: string): boolean {
 
 const TX_NOTE_PREFIX = 'CapyCamp Badge Claim:'
 
-function publicClient() {
-  return createPublicClient({
-    chain: abstract,
-    transport: http(abstract.rpcUrls.default.http[0]),
-  })
+function buildClaimMessage(slug: string): string {
+  // Must match what the client signs.
+  return `${TX_NOTE_PREFIX}\nBadge: ${slug}`
 }
 
 function computeEarned(address: string, slug: string): boolean {
@@ -56,7 +53,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
   const address = typeof body?.address === 'string' ? body.address.trim().toLowerCase() : null
   const slug = typeof body?.slug === 'string' ? body.slug.trim() : null
-  const txHash = typeof body?.txHash === 'string' ? body.txHash.trim() : null
+  const signature = typeof body?.signature === 'string' ? body.signature.trim() : null
 
   if (!address || !isValidAddress(address)) {
     return NextResponse.json({ error: 'Missing or invalid address' }, { status: 400 })
@@ -64,8 +61,8 @@ export async function POST(request: Request) {
   if (!slug || !BADGES.some((b) => b.slug === slug)) {
     return NextResponse.json({ error: 'Missing or invalid badge slug' }, { status: 400 })
   }
-  if (!txHash || !isValidTxHash(txHash)) {
-    return NextResponse.json({ error: 'Missing or invalid txHash' }, { status: 400 })
+  if (!signature || !signature.startsWith('0x')) {
+    return NextResponse.json({ error: 'Missing or invalid signature' }, { status: 400 })
   }
 
   if (hasClaimedBadge(address, slug)) {
@@ -82,40 +79,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Not eligible to claim this badge yet' }, { status: 403 })
   }
 
-  // Verify on-chain tx (Abstract): must be from address with matching data prefix.
-  // (Some smart wallets route through system contracts, so we do not require tx.to === address.)
-  const c = publicClient()
-  let receipt: Awaited<ReturnType<typeof c.getTransactionReceipt>> | null = null
+  // Signature-only claim: no on-chain transaction, so users never pay gas.
+  const message = buildClaimMessage(slug)
+  let valid = false
   try {
-    receipt = await c.getTransactionReceipt({ hash: txHash as `0x${string}` })
+    valid = await verifyMessage({
+      address: address as `0x${string}`,
+      message,
+      signature: signature as `0x${string}`,
+    })
   } catch {
-    return NextResponse.json({ error: 'Transaction not confirmed yet' }, { status: 409 })
-  }
-  if (!receipt || receipt.status !== 'success') {
-    return NextResponse.json({ error: 'Transaction failed' }, { status: 400 })
+    valid = false
   }
 
-  let tx: Awaited<ReturnType<typeof c.getTransaction>> | null = null
-  try {
-    tx = await c.getTransaction({ hash: txHash as `0x${string}` })
-  } catch {
-    return NextResponse.json({ error: 'Could not load transaction' }, { status: 400 })
-  }
-  if (!tx || !tx.from) {
-    return NextResponse.json({ error: 'Invalid transaction' }, { status: 400 })
-  }
-
-  const fromOk = tx.from.toLowerCase() === address.toLowerCase()
-  const expectedPrefix = toHex(`${TX_NOTE_PREFIX} ${slug}`)
-  const dataOk =
-    typeof tx.input === 'string' &&
-    tx.input.toLowerCase().includes(expectedPrefix.toLowerCase().slice(2)) // ignore 0x and allow AA wrappers
-
-  if (!fromOk || !dataOk) {
-    return NextResponse.json({ error: 'Transaction does not match claim requirements' }, { status: 401 })
+  if (!valid) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
   claimBadge(address, slug)
-  return NextResponse.json({ claimed: true, slug, txHash })
+  return NextResponse.json({ claimed: true, slug })
 }
 
