@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 import type { CapyTraits, RarityTier } from '@/lib/capycamp-rarity'
+import { withLocalNftImageSources } from '@/lib/nft-local-image'
 import type { PersistedProfile } from '@/lib/profile-local-storage'
 import { readProfileSnapshot } from '@/lib/profile-local-storage'
 
@@ -43,7 +44,7 @@ export function useCapyNFTs() {
       if (raw) {
         const parsed = JSON.parse(raw) as { nfts?: CapyNft[]; cachedAt?: number }
         if (Array.isArray(parsed?.nfts) && parsed.nfts.length > 0) {
-          setNfts(parsed.nfts)
+          setNfts(withLocalNftImageSources(parsed.nfts))
         }
       }
     } catch {
@@ -62,9 +63,10 @@ export function useCapyNFTs() {
         }
         if (!cancelled) {
           const data = body as ApiResponse & { error?: string; hint?: string }
-          setNfts(Array.isArray(data.nfts) ? data.nfts : [])
+          const list = withLocalNftImageSources(Array.isArray(data.nfts) ? data.nfts : [])
+          setNfts(list)
           try {
-            localStorage.setItem(cacheKey, JSON.stringify({ nfts: data.nfts ?? [], cachedAt: Date.now() }))
+            localStorage.setItem(cacheKey, JSON.stringify({ nfts: list, cachedAt: Date.now() }))
           } catch {
             // ignore
           }

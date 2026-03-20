@@ -2,6 +2,7 @@ import { createPublicClient, http, parseAbiItem, type Address } from 'viem'
 import { abstract } from 'viem/chains'
 import { CAPYCAMP_CONTRACT } from '@/config/capycamp'
 import { parseAttributesToTraits } from '@/lib/capycamp-rarity'
+import { getLocalNftImageSrc } from '@/lib/nft-local-image'
 import type { CapyNft } from '@/lib/opensea-capycamp'
 
 const contract = CAPYCAMP_CONTRACT as Address
@@ -86,23 +87,18 @@ export async function fetchCapyMetadataForToken(tokenId: string): Promise<CapyNf
     const res = await fetch(url, { cache: 'no-store' })
     if (!res.ok) return null
     const json = (await res.json()) as JsonMetadata
-    let image: string | null = json.image ?? null
-    if (image?.startsWith('ipfs://')) {
-      const h = image.slice('ipfs://'.length).replace(/^ipfs\//, '')
-      image = `https://ipfs.io/ipfs/${h}`
-    }
     const name = json.name?.trim() || `CapyCamp #${tokenId}`
     const parsed = parseAttributesToTraits(
       json.attributes,
       tokenId,
       name,
-      image,
+      null,
       json.properties ?? null,
     )
     return {
       tokenId,
       name: parsed.name,
-      image: parsed.image,
+      image: getLocalNftImageSrc(tokenId),
       contract: CAPYCAMP_CONTRACT.toLowerCase(),
       rarity: parsed.rarity,
       traits: parsed.traits,
@@ -122,7 +118,7 @@ async function metadataFromTokenUri(tokenId: string): Promise<CapyNft> {
   return {
     tokenId,
     name: p.name,
-    image: p.image,
+    image: getLocalNftImageSrc(tokenId),
     contract: CAPYCAMP_CONTRACT.toLowerCase(),
     rarity: p.rarity,
     traits: p.traits,

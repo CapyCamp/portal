@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server'
 import { CAPYCAMP_CONTRACT } from '@/config/capycamp'
 import { parseAttributesToTraits, computePowerLevel } from '@/lib/capycamp-rarity'
 import { fetchCapyMetadataForToken, ownsCapyCampOnChain } from '@/lib/capycamp-onchain'
+import { getLocalNftImageSrc } from '@/lib/nft-local-image'
 import { getOpenSeaChain, ownsCapyCampOnOpenSea } from '@/lib/opensea-capycamp'
 import { getProfile, upsertProfile } from '../store'
 
 type Body = {
   wallet?: string
   tokenId?: string
-  image?: string | null
   contract?: string
 }
 
@@ -33,7 +33,6 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as Body | null
   const wallet = body?.wallet?.toLowerCase()
   const tokenId = body?.tokenId
-  const image = body?.image ?? null
   const contract = body?.contract?.toLowerCase()
 
   if (!wallet || !tokenId || !contract) {
@@ -78,7 +77,7 @@ export async function POST(request: Request) {
 
     const updated = {
       wallet,
-      pfp_image: meta?.image ?? image,
+      pfp_image: getLocalNftImageSrc(tokenId),
       pfp_token_id: tokenId,
       pfp_contract: contract,
       pfp_rarity: rarity,

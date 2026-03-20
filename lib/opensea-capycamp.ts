@@ -1,4 +1,5 @@
 import { CAPYCAMP_CONTRACT } from '@/config/capycamp'
+import { getLocalNftImageSrc } from '@/lib/nft-local-image'
 import {
   computePowerLevel,
   type CapyTraits,
@@ -32,17 +33,13 @@ export type CapyNft = {
   allTraits: { trait_type: string; value: string }[]
 }
 
-function bareCapyNft(
-  tokenId: string,
-  name: string,
-  image: string | null,
-): CapyNft {
+function bareCapyNft(tokenId: string, name: string): CapyNft {
   const rarity = rarityFromTokenId(tokenId)
   const traits: CapyTraits = { hat: '—', outfit: '—', background: '—' }
   return {
     tokenId,
     name,
-    image,
+    image: getLocalNftImageSrc(tokenId),
     contract: CAPYCAMP_CONTRACT.toLowerCase(),
     rarity,
     traits,
@@ -60,11 +57,7 @@ function capycampFromNfts(nfts: OpenSeaNft[], limit: number): CapyNft[] {
     )
     .slice(0, limit)
     .map((nft) =>
-      bareCapyNft(
-        nft.identifier,
-        nft.name ?? `CapyCamp #${nft.identifier}`,
-        nft.image_url,
-      ),
+      bareCapyNft(nft.identifier, nft.name ?? `CapyCamp #${nft.identifier}`),
     )
 }
 

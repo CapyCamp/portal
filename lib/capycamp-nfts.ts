@@ -9,6 +9,7 @@ import {
   type CapyNft,
 } from '@/lib/opensea-capycamp'
 import { parseAttributesToTraits } from '@/lib/capycamp-rarity'
+import { getLocalNftImageSrc, withLocalNftImageSources } from '@/lib/nft-local-image'
 
 function alchemyToCapyNft(nft: {
   tokenId?: string
@@ -17,8 +18,7 @@ function alchemyToCapyNft(nft: {
   rawMetadata?: { attributes?: { trait_type?: string; value?: unknown }[] }
 }): CapyNft {
   const tokenId = String(nft.tokenId ?? '')
-  const image =
-    nft?.image?.cachedUrl || nft?.image?.originalUrl || nft?.image?.pngUrl || null
+  const image = getLocalNftImageSrc(tokenId)
   const name = nft.name ?? `CapyCamp #${tokenId}`
   const raw = nft.rawMetadata as
     | { attributes?: { trait_type?: string; name?: string; value?: unknown }[]; properties?: Record<string, unknown> }
@@ -59,7 +59,7 @@ function mergeByTokenId(onchain: CapyNft[], opensea: CapyNft[], limit: number): 
           : n.allTraits
       map.set(n.tokenId, {
         ...cur,
-        image: n.image || cur.image,
+        image: getLocalNftImageSrc(n.tokenId),
         name: cur.name?.includes('#') ? n.name || cur.name : cur.name || n.name,
         rarity: hasRichTraits ? cur.rarity : n.rarity,
         traits: hasRichTraits ? cur.traits : n.traits,
@@ -118,5 +118,5 @@ export async function getCapyCampNftsForOwner(
     nfts = await fetchViaAlchemy(owner, alchemyKey, limit)
   }
 
-  return nfts
+  return withLocalNftImageSources(nfts)
 }

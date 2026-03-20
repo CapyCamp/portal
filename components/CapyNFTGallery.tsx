@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { RotateCcw } from 'lucide-react'
@@ -17,6 +16,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { NftDisplayImage } from '@/components/NftDisplayImage'
+import { getLocalNftImageSrc } from '@/lib/nft-local-image'
 
 function NftCardBack({ nft }: { nft: CapyNft }) {
   const rows = nft.allTraits?.length
@@ -153,19 +154,15 @@ export function CapyNFTGallery() {
                     <div
                       className={`relative mx-auto aspect-square w-[85%] max-w-[96px] overflow-hidden rounded-xl border-2 border-amber-200/50 bg-slate-900/5 sm:max-w-[110px] ${glow}`}
                     >
-                      {nft.image ? (
-                        <Image
-                          src={nft.image}
-                          alt={nft.name}
-                          fill
-                          className="object-cover"
-                          sizes="(max-width: 640px) 30vw, 120px"
-                        />
-                      ) : (
-                        <div className="flex h-full min-h-[72px] w-full items-center justify-center bg-linear-to-br from-amber-400 to-sky-400 p-1 text-[9px] font-semibold text-white">
-                          {nft.name}
-                        </div>
-                      )}
+                      <NftDisplayImage
+                        src={nft.image || getLocalNftImageSrc(nft.tokenId)}
+                        alt={nft.name}
+                        nameFallback={nft.name}
+                        fill
+                        imgClassName="object-cover"
+                        sizes="(max-width: 640px) 30vw, 120px"
+                        loading="lazy"
+                      />
                     </div>
                     <span className="flex flex-col items-center gap-0.5 text-[8px] font-extrabold uppercase leading-tight tracking-wide text-slate-700 sm:text-[9px]">
                       <span className="text-slate-500">Power</span>
@@ -221,20 +218,16 @@ export function CapyNFTGallery() {
                       <div
                         className={`relative h-full w-full ${rarityGlowClass(expandedNft.rarity)}`}
                       >
-                        {expandedNft.image ? (
-                          <Image
-                            src={expandedNft.image}
-                            alt={expandedNft.name}
-                            fill
-                            className="object-contain bg-slate-900/5"
-                            sizes="400px"
-                            priority
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-amber-400 to-sky-400 text-lg font-bold text-white">
-                            {expandedNft.name}
-                          </div>
-                        )}
+                        <NftDisplayImage
+                          src={expandedNft.image || getLocalNftImageSrc(expandedNft.tokenId)}
+                          alt={expandedNft.name}
+                          nameFallback={expandedNft.name}
+                          fill
+                          imgClassName="object-contain bg-slate-900/5"
+                          sizes="400px"
+                          loading="lazy"
+                          textFallbackClassName="flex h-full w-full items-center justify-center bg-linear-to-br from-amber-400 to-sky-400 text-lg font-bold text-white"
+                        />
                       </div>
                     </div>
 
