@@ -98,17 +98,6 @@ export function CapyCampLayout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          {/* Center mascot */}
-          <div className="pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 sm:top-8 md:top-10">
-            <Image
-              src="/capy-lay.png"
-              alt="Capy resting at CapyCamp"
-              width={96}
-              height={96}
-              className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 drop-shadow-[0_10px_25px_rgba(15,23,42,0.55)]"
-            />
-          </div>
-
           {/* Wallet - Right: Abstract connect button */}
           {!isBrand && (
             <div className="pointer-events-auto absolute right-2 top-2 flex items-center gap-1.5 sm:right-4 sm:top-4 sm:gap-3 md:right-6">
