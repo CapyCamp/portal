@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLoginWithAbstract } from '@abstract-foundation/agw-react'
 import { useAccount, useBalance, useSignMessage } from 'wagmi'
-import { Zap, Award, Pencil, Palette, ImageIcon, Check, X } from 'lucide-react'
+import { Flame, Award, Pencil, Palette, ImageIcon, Check, X } from 'lucide-react'
 import {
   rarityGlowClass,
   rarityLabel,
@@ -625,7 +625,7 @@ export function ProfileCard() {
                 {isBalanceLoading ? '…' : balanceFormatted}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-amber-100/90 px-2.5 py-1 text-[10px] font-medium text-amber-900 shadow-sm">
-                <Zap className="h-2.5 w-2.5 text-amber-600" />
+                <Flame className="h-2.5 w-2.5 text-amber-600" />
                 {streak > 0 ? `${streak}d` : '—'} streak
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/70 bg-emerald-50/90 px-2.5 py-1 text-[10px] font-medium text-emerald-900 shadow-sm">

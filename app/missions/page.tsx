@@ -1,4 +1,4 @@
-import { Zap } from 'lucide-react'
+import { Compass } from 'lucide-react'
 
 export default function MissionsPage() {
   const missions = [
@@ -38,7 +38,7 @@ export default function MissionsPage() {
         {missions.map((mission) => (
           <div key={mission.id} className={`border-4 p-6 rounded-xl ${mission.status === 'locked' ? 'border-gray-300 opacity-50' : mission.status === 'in-progress' ? 'border-sky-400 bg-sky-50' : 'border-green-400 bg-green-50'}`}>
             <div className="flex items-start gap-4">
-              <Zap className={`w-6 h-6 flex-shrink-0 mt-1 ${mission.status === 'locked' ? 'text-gray-400' : 'text-amber-500'}`} />
+              <Compass className={`w-6 h-6 flex-shrink-0 mt-1 ${mission.status === 'locked' ? 'text-gray-400' : 'text-sky-600'}`} />
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-bold text-gray-800">{mission.title}</h3>
@@ -53,7 +53,7 @@ export default function MissionsPage() {
               </div>
               <div className="text-right flex-shrink-0">
                 <div className="font-bold text-amber-600 text-lg">{mission.reward}</div>
-                <div className="text-xs text-gray-600">XP</div>
+                <div className="text-xs text-gray-600">Cookies</div>
               </div>
             </div>
           </div>

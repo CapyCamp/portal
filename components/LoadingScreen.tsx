@@ -74,15 +74,17 @@ export function LoadingScreen({ onComplete }: { onComplete: () => void }) {
           </p>
         </motion.div>
 
-        {/* Progress bar — fills over 5s */}
+        <p className="text-xs font-medium text-slate-400">Loading site…</p>
+
+        {/* Site load progress (not game XP) — fills over 5s */}
         <motion.div
-          className="h-1.5 w-64 overflow-hidden rounded-full bg-slate-700 sm:w-80"
+          className="h-1.5 w-64 overflow-hidden rounded-full bg-slate-600/80 sm:w-80"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
           <motion.div
-            className="h-full origin-left rounded-full bg-linear-to-r from-amber-500 to-amber-400"
+            className="h-full origin-left rounded-full bg-linear-to-r from-sky-500 to-sky-400"
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{

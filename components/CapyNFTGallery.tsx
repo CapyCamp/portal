@@ -94,10 +94,8 @@ function NftCardBack({ nft }: { nft: CapyNft }) {
           <span className="font-bold text-violet-700">{nft.powerLevel}</span>
         </div>
         <div className="mt-1 flex justify-between gap-2">
-          <span className="text-slate-500">Daily XP perk</span>
-          <span className="font-bold text-amber-700">
-            {nft.xpBoostPercent ? `+${nft.xpBoostPercent}%` : '—'}
-          </span>
+          <span className="text-slate-500">Rarity</span>
+          <span className="font-bold text-violet-700">{rarityLabel(nft.rarity)}</span>
         </div>
         <p className="mt-2 text-center text-[10px] text-slate-400">
           #{nft.tokenId} · {nft.name}
@@ -335,10 +333,8 @@ export function CapyNFTGallery() {
                       )}
                     </div>
                     <span className="flex flex-col items-center gap-0.5 text-[8px] font-extrabold uppercase leading-tight tracking-wide text-slate-700 sm:text-[9px]">
-                      <span className="text-slate-500">Bonus XP</span>
-                      <span className="text-amber-700 tabular-nums">
-                        +{nft.xpBoostPercent ?? 0}%
-                      </span>
+                      <span className="text-slate-500">Power</span>
+                      <span className="text-sky-800 tabular-nums">{nft.powerLevel}</span>
                     </span>
                     {isEquipped && (
                       <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
