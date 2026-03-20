@@ -1,5 +1,5 @@
 /**
- * CapyCamp NFT rarity, traits, power level, and XP perks.
+ * CapyCamp NFT rarity, traits, and power level.
  */
 
 export type RarityTier = 'common' | 'rare' | 'epic' | 'legendary'

@@ -20,7 +20,6 @@ const DOCK_ITEMS: DockItem[] = [
   { id: 'lore', label: 'Lore', href: '/lore', iconSrc: '/buttons/lore.png' },
   { id: 'shop', label: 'Shop', href: '/shop', iconSrc: '/buttons/shop.png', comingSoon: true },
   { id: 'badges', label: 'Badges', href: '/badges', iconSrc: '/buttons/badges.png' },
-  { id: 'leaderboard', label: 'Leaderboard', href: '/leaderboard', iconSrc: '/buttons/leaderboard.png' },
 ]
 
 export function BottomDock() {

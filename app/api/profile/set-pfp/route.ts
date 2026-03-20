@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { CAPYCAMP_CONTRACT } from '@/config/capycamp'
-import { parseAttributesToTraits, RARITY_XP_BOOST, computePowerLevel } from '@/lib/capycamp-rarity'
+import { parseAttributesToTraits, computePowerLevel } from '@/lib/capycamp-rarity'
 import { fetchCapyMetadataForToken, ownsCapyCampOnChain } from '@/lib/capycamp-onchain'
 import { getOpenSeaChain, ownsCapyCampOnOpenSea } from '@/lib/opensea-capycamp'
 import { getProfile, upsertProfile } from '../store'
@@ -74,9 +74,7 @@ export async function POST(request: Request) {
     const rarity = meta?.rarity ?? fallback.rarity
     const traits = meta?.traits ?? fallback.traits
     const powerLevel = meta?.powerLevel ?? computePowerLevel(rarity, traits)
-    const xpBoost = meta?.xpBoostPercent ?? RARITY_XP_BOOST[rarity]
     const existing = getProfile(wallet)
-    const alreadyGranted = existing?.xpBonusGranted ?? false
 
     const updated = {
       wallet,
@@ -86,8 +84,6 @@ export async function POST(request: Request) {
       pfp_rarity: rarity,
       pfp_traits: traits,
       pfp_power_level: powerLevel,
-      xp_boost_percent: xpBoost,
-      xpBonusGranted: alreadyGranted || true,
     }
 
     upsertProfile({ ...existing, ...updated, wallet })

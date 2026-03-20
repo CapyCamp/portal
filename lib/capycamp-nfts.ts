@@ -1,5 +1,5 @@
 /**
- * Shared fetcher for CapyCamp NFTs by owner. Used by NFT API and XP claim.
+ * Shared fetcher for CapyCamp NFTs by owner. Used by the NFT API and profile flows.
  */
 import { CAPYCAMP_CONTRACT } from '@/config/capycamp'
 import { fetchCapycampersOnChain } from '@/lib/capycamp-onchain'
@@ -86,13 +86,13 @@ async function fetchViaAlchemy(owner: string, apiKey: string, limit: number): Pr
 }
 
 export type GetCapyCampNftsOptions = {
-  /** Max NFTs to return (default 20 for display, use higher for XP tally) */
+  /** Max NFTs to return (default 20 for display; use higher for large collections) */
   limit?: number
 }
 
 /**
  * Fetch CapyCamp NFTs owned by address (on-chain + OpenSea merge, Alchemy fallback).
- * Used for NFT gallery and for daily XP calculation (holdings-based).
+ * Used for the NFT gallery and ownership checks.
  */
 export async function getCapyCampNftsForOwner(
   owner: string,

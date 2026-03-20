@@ -6,9 +6,8 @@ function isValidAddress(addr: string): boolean {
 }
 
 /**
- * Sync profile from client (e.g. localStorage) to server store so the user
- * appears on the leaderboard and elsewhere. Called when visiting leaderboard
- * so in-memory store has current user even after server restart.
+ * Sync profile from client (e.g. localStorage) to server store so badges and settings
+ * stay consistent after serverless cold starts.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -19,16 +18,9 @@ export async function POST(request: Request) {
   }
 
   const patch: Record<string, unknown> = { wallet }
-  const existing = getProfile(wallet)
 
   if (typeof body?.display_name === 'string') {
     patch.display_name = body.display_name.trim().slice(0, 48) || undefined
-  }
-  if (typeof body?.xp === 'number' && body.xp >= 0) {
-    patch.xp = Math.max(existing?.xp ?? 0, body.xp)
-  }
-  if (typeof body?.last_claim === 'number' && body.last_claim >= 0) {
-    patch.last_claim = Math.max(existing?.last_claim ?? 0, body.last_claim)
   }
   if (body?.pfp_image !== undefined) {
     patch.pfp_image = body.pfp_image

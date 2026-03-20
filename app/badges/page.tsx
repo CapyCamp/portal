@@ -112,7 +112,6 @@ export default function BadgesPage() {
         body: JSON.stringify({
           wallet: address,
           display_name: snap.display_name,
-          xp: typeof snap.xp === 'number' ? snap.xp : undefined,
           pfp_image: snap.pfp_image ?? undefined,
           pfp_rarity: snap.pfp_rarity ?? undefined,
           profile_bg_from: snap.profile_bg_from ?? undefined,

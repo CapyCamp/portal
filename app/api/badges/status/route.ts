@@ -41,9 +41,8 @@ export async function GET(request: Request) {
       const hasFirstBadge =
         hasClaimedBadge(lower, 'first-day-at-camp') ||
         (Array.isArray(profile?.claimed_badges) && profile!.claimed_badges.includes('first-day-at-camp'))
-      const hasXp = typeof profile?.xp === 'number' && profile.xp > 0
       const hasPfp = Boolean(profile?.pfp_token_id) || Boolean(profile?.pfp_image)
-      earned = hasFirstBadge && hasPfp && hasXp
+      earned = hasFirstBadge && hasPfp
     }
 
     if (badge.slug === 'daily-login-streak') {

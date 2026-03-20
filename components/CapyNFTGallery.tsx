@@ -38,7 +38,6 @@ type ProfileStatus = {
   pfp_rarity?: RarityTier
   pfp_traits?: { hat: string; outfit: string; background: string }
   pfp_power_level?: number
-  xp_boost_percent?: number
 }
 
 function NftCardBack({ nft }: { nft: CapyNft }) {
@@ -222,10 +221,9 @@ export function CapyNFTGallery() {
                 <span className="font-bold text-slate-900">{profile.pfp_power_level ?? '—'}</span>
               </div>
               <div>
-                <span className="text-slate-600">Daily XP perk</span>{' '}
-                <span className="font-bold text-amber-700">
-                  +{profile.xp_boost_percent ?? 0}%{' '}
-                  {profile.xp_boost_percent ? '(Rare+)' : '(equip Rare+ )'}
+                <span className="text-slate-600">Rarity</span>{' '}
+                <span className="font-bold text-slate-900">
+                  {rarityLabel(profile.pfp_rarity)}
                 </span>
               </div>
               <div className="sm:col-span-2">

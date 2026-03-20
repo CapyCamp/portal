@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLoginWithAbstract } from '@abstract-foundation/agw-react'
 import { useAccount, useBalance, useSignMessage } from 'wagmi'
-import { Zap, Award, Pencil, Palette, ImageIcon, Check, X, Trophy } from 'lucide-react'
+import { Zap, Award, Pencil, Palette, ImageIcon, Check, X } from 'lucide-react'
 import {
   rarityGlowClass,
   rarityLabel,
@@ -32,11 +32,6 @@ import {
   restoreProfileIfNeeded,
   type PersistedProfile,
 } from '@/lib/profile-local-storage'
-import {
-  applyXpClaimToSnapshot,
-  xpClaimRequestBody,
-  type XpClaimApiResponse,
-} from '@/lib/xp-claim-client'
 import { BADGES } from '@/lib/badges'
 
 type AbstractPortalProfile = {
@@ -60,7 +55,6 @@ type ProfileStatus = {
   pfp_contract?: string | null
   pfp_rarity?: RarityTier
   pfp_power_level?: number
-  xp_boost_percent?: number
 }
 
 const BG_PRESETS: { label: string; from: string; to: string }[] = [
@@ -78,7 +72,7 @@ function friendlyStreakError(err: unknown): string {
 
   // Wallet / user behavior: Metamask/Wagmi often throws these when user cancels.
   if (msg.includes('rejected') || msg.includes('user rejected')) {
-    return 'Signature rejected. No XP awarded.'
+    return 'Signature rejected. Streak not updated.'
   }
 
   // Server-side verification failures.
@@ -122,10 +116,8 @@ export function ProfileCard() {
   const [selectedPfpNft, setSelectedPfpNft] = useState<CapyNft | null>(null)
   const [editProfileOpen, setEditProfileOpen] = useState(false)
 
-  const [totalXp, setTotalXp] = useState<number | null>(null)
   const [streak, setStreak] = useState<number>(0)
   const [hasClaimedToday, setHasClaimedToday] = useState(false)
-  const [xpJustClaimed, setXpJustClaimed] = useState<number>(0)
   const [streakClaiming, setStreakClaiming] = useState(false)
   const [streakError, setStreakError] = useState<string | null>(null)
 
@@ -196,7 +188,6 @@ export function ProfileCard() {
 
   useEffect(() => {
     if (!address) {
-      setTotalXp(null)
       setStreak(0)
       setHasClaimedToday(false)
       return
@@ -204,47 +195,16 @@ export function ProfileCard() {
     let cancelled = false
     const run = async () => {
       await restoreProfileIfNeeded(address)
-      const [statusRes, rewardsRes] = await Promise.all([
-        fetch(`/api/profile/status?address=${encodeURIComponent(address)}`),
-        fetch(`/api/rewards/status?address=${encodeURIComponent(address)}`),
-      ])
+      const rewardsRes = await fetch(`/api/rewards/status?address=${encodeURIComponent(address)}`)
       if (cancelled) return
-      const profile = statusRes.ok ? await statusRes.json() : {}
       const rewards = rewardsRes.ok ? await rewardsRes.json() : {}
-      const xpFromProfile = typeof profile.xp === 'number' ? profile.xp : 0
-      const localSnap = readProfileSnapshot(address)
-      const localXp = typeof localSnap?.xp === 'number' ? localSnap.xp : 0
-      setTotalXp(Math.max(xpFromProfile, localXp))
       setStreak(rewards.streak ?? 0)
       setHasClaimedToday(rewards.hasClaimedToday ?? false)
-      if (Math.max(xpFromProfile, localXp) > 0) {
-        persistProfileSnapshot(address, {
-          ...(readProfileSnapshot(address) || {}),
-          wallet: address,
-          xp: Math.max(xpFromProfile, localXp),
-        })
-      }
-      const claimRes = await fetch('/api/xp/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(xpClaimRequestBody(address)),
-      })
-      const claimData = claimRes.ok ? ((await claimRes.json()) as XpClaimApiResponse) : {}
-      if (cancelled) return
-      applyXpClaimToSnapshot(address, claimData)
-      const mergedXp = readProfileSnapshot(address)?.xp
-      if (claimData.claimed && typeof claimData.xpGained === 'number') {
-        setTotalXp(typeof mergedXp === 'number' ? mergedXp : (claimData.totalXp ?? 0))
-        setXpJustClaimed(claimData.xpGained)
-        window.setTimeout(() => setXpJustClaimed(0), 2500)
-      } else if (typeof mergedXp === 'number') {
-        setTotalXp(mergedXp)
-      } else if (typeof claimData.totalXp === 'number') {
-        setTotalXp(claimData.totalXp)
-      }
     }
     void run()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [address])
 
   const handleStreakClaim = async () => {
@@ -266,16 +226,7 @@ export function ProfileCard() {
         return
       }
       setStreak(data.streak ?? streak)
-      setTotalXp(data.totalXp ?? totalXp ?? 0)
       setHasClaimedToday(true)
-      if (typeof data.xpGranted === 'number') {
-        setXpJustClaimed(data.xpGranted)
-        window.setTimeout(() => setXpJustClaimed(0), 2500)
-      }
-      if (data.totalXp != null) {
-        persistProfileSnapshot(address, { ...(readProfileSnapshot(address) || {}), wallet: address, xp: data.totalXp })
-      }
-      setProfileStatus((prev) => (prev ? { ...prev, xp: data.totalXp } : prev))
     } catch (e) {
       setStreakError(friendlyStreakError(e))
     } finally {
@@ -677,15 +628,6 @@ export function ProfileCard() {
                 <Zap className="h-2.5 w-2.5 text-amber-600" />
                 {streak > 0 ? `${streak}d` : '—'} streak
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-400/70 bg-blue-50/90 px-2.5 py-1 text-[10px] font-semibold text-blue-900 shadow-sm">
-                <Trophy className="h-2.5 w-2.5 text-blue-600" />
-                {totalXp !== null ? totalXp.toLocaleString() : '—'} XP
-                {xpJustClaimed > 0 && (
-                  <span className="ml-0.5 rounded bg-blue-500 px-1 py-0.5 text-[9px] font-bold text-white">
-                    +{xpJustClaimed}
-                  </span>
-                )}
-              </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/70 bg-emerald-50/90 px-2.5 py-1 text-[10px] font-medium text-emerald-900 shadow-sm">
                 <Award className="h-2.5 w-2.5 text-emerald-600" />
                 {badgeCount} badge{badgeCount === 1 ? '' : 's'}
@@ -708,12 +650,12 @@ export function ProfileCard() {
                   onClick={() => void handleStreakClaim()}
                   disabled={hasClaimedToday || streakClaiming}
                 >
-                  {streakClaiming ? 'Sign & claim…' : hasClaimedToday ? 'Streak claimed' : 'Claim 10 XP (streak)'}
+                  {streakClaiming ? 'Sign & claim…' : hasClaimedToday ? 'Streak claimed' : 'Claim daily streak'}
                 </Button>
                 {streakError && (
                   <span className="text-[10px] text-red-600">{streakError}</span>
                 )}
-                <span className="text-[10px] text-slate-600/90">7th day = +50 XP bonus</span>
+                <span className="text-[10px] text-slate-600/90">Sign once per day to grow your streak</span>
               </div>
             )}
           </div>
@@ -728,7 +670,7 @@ export function ProfileCard() {
             </DialogTitle>
             <p className="text-xs text-slate-600">
               Tap an NFT to select it, then tap <strong>Save</strong> to use it as
-              your profile picture. XP perks follow that NFT&apos;s rarity.
+              your profile picture.
             </p>
           </DialogHeader>
           {nftsLoading ? (
@@ -775,8 +717,8 @@ export function ProfileCard() {
                           </span>
                         )}
                       </div>
-                      <span className="truncate px-0.5 text-[10px] font-medium text-slate-800">
-                        +{nft.xpBoostPercent ?? 0}% Bonus XP
+                      <span className="truncate px-0.5 text-[10px] font-medium text-slate-600">
+                        {rarityLabel(nft.rarity)}
                       </span>
                     </button>
                   )

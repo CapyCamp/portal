@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { verifyMessage } from 'viem'
-import { getProfile, patchProfile } from '@/app/api/profile/store'
 import {
   getDailyClaim,
   getNextUtcMidnight,
@@ -8,7 +7,6 @@ import {
   getYesterdayUtcDateString,
   upsertDailyClaim,
 } from '@/app/api/rewards/store'
-import { STREAK_DAY_7_BONUS_XP, STREAK_XP_PER_DAY } from '@/config/xp'
 
 const CLAIM_MESSAGE_PREFIX = 'CapyCamp Daily Streak Claim\nDate: '
 
@@ -58,7 +56,7 @@ export async function POST(request: Request) {
       signature: signature as `0x${string}`,
     })
   } catch {
-    // invalid signature
+    /* invalid signature */
   }
   if (!valid) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
@@ -73,19 +71,11 @@ export async function POST(request: Request) {
     }
   }
 
-  const xpGranted = STREAK_XP_PER_DAY + (streak === 7 ? STREAK_DAY_7_BONUS_XP : 0)
-
   upsertDailyClaim({
     address,
     lastClaimDate: today,
     streak,
   })
-
-  const wallet = address.toLowerCase()
-  const profile = getProfile(wallet)
-  const currentXp = profile?.xp ?? 0
-  const totalXp = currentXp + xpGranted
-  patchProfile(wallet, { xp: totalXp })
 
   const nextReset = getNextUtcMidnight()
   const now = new Date()
@@ -95,9 +85,7 @@ export async function POST(request: Request) {
     success: true,
     hasClaimedToday: true,
     streak,
-    xpGranted,
-    totalXp,
-    day7Bonus: streak === 7,
+    day7Milestone: streak === 7,
     nextResetIso: nextReset.toISOString(),
     secondsUntilReset: Math.floor(msUntilReset / 1000),
   })

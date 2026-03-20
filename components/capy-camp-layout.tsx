@@ -6,9 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter, usePathname } from 'next/navigation'
 import { BottomDock } from './BottomDock'
 import { ConnectWallet } from '@/components/ConnectWallet'
-import { XPBar } from '@/components/XPBar'
-import { AutoClaimXP } from '@/components/AutoClaimXP'
-
 export function CapyCampLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -80,7 +77,6 @@ export function CapyCampLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <AutoClaimXP />
       {/* Top HUD - Floating */}
       <div className="pointer-events-none fixed left-0 right-0 top-0 z-40">
         <div className="relative h-20 sm:h-24 md:h-28">
@@ -102,18 +98,15 @@ export function CapyCampLayout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          {/* XP Bar - Center (real XP from profile) */}
-          <div className="pointer-events-auto absolute left-1/2 top-8 -translate-x-1/2 transform sm:top-10 md:top-12">
-            <div className="pointer-events-none absolute -top-10 left-1/2 -translate-x-1/2 sm:-top-12 md:-top-16">
-              <Image
-                src="/capy-lay.png"
-                alt="Capy resting at CapyCamp"
-                width={96}
-                height={96}
-                className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 drop-shadow-[0_10px_25px_rgba(15,23,42,0.55)]"
-              />
-            </div>
-            <XPBar />
+          {/* Center mascot */}
+          <div className="pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 sm:top-8 md:top-10">
+            <Image
+              src="/capy-lay.png"
+              alt="Capy resting at CapyCamp"
+              width={96}
+              height={96}
+              className="h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 drop-shadow-[0_10px_25px_rgba(15,23,42,0.55)]"
+            />
           </div>
 
           {/* Wallet - Right: Abstract connect button */}

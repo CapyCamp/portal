@@ -9,10 +9,6 @@ function isValidAddress(addr: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(addr)
 }
 
-function isValidTxHash(h: string): boolean {
-  return /^0x[a-fA-F0-9]{64}$/.test(h)
-}
-
 const TX_NOTE_PREFIX = 'CapyCamp Badge Claim:'
 
 function buildClaimMessage(slug: string): string {
@@ -32,9 +28,8 @@ function computeEarned(address: string, slug: string): boolean {
 
   if (slug === 'navigator') {
     const hasFirstBadge = hasClaimedBadge(lower, 'first-day-at-camp')
-    const hasXp = typeof profile?.xp === 'number' && profile.xp > 0
     const hasPfp = Boolean(profile?.pfp_token_id) || Boolean(profile?.pfp_image)
-    return hasFirstBadge && hasPfp && hasXp
+    return hasFirstBadge && hasPfp
   }
 
   if (slug === 'daily-login-streak') return streak >= 7

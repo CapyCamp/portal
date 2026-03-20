@@ -13,14 +13,6 @@ export type ProfileRecord = {
   pfp_rarity?: RarityTier
   pfp_traits?: CapyTraits
   pfp_power_level?: number
-  xp_boost_percent?: number
-  xpBonusGranted?: boolean
-  /** Total XP (daily rarity XP + any other sources). Leaderboard-ready. */
-  xp?: number
-  /** Timestamp (ms) of last daily rarity XP claim. Used for 24h cooldown. */
-  last_claim?: number
-  /** Last amount of XP granted from holdings claim (for "Last claim: +X XP" display). */
-  last_xp_gained?: number
   /** Claimed badge slugs (persisted via client snapshot + sync). */
   claimed_badges?: string[]
 }
@@ -37,10 +29,6 @@ export const DEFAULT_BG_TO = DEFAULT_PROFILE_BG_TO
 
 export function getProfile(wallet: string): ProfileRecord | undefined {
   return profiles.get(wallet.toLowerCase())
-}
-
-export function getAllProfiles(): ProfileRecord[] {
-  return Array.from(profiles.values())
 }
 
 export function upsertProfile(record: ProfileRecord) {
