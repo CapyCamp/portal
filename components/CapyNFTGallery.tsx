@@ -1,21 +1,15 @@
 'use client'
 
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAccount } from 'wagmi'
-import { MoreVertical, RotateCcw, UserCircle2, Tent } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import { useCapyNFTs, type CapyNft } from '@/hooks/useCapyNFTs'
 import {
   rarityGlowClass,
   rarityLabel,
   RARITY_BADGE_CLASSES,
 } from '@/lib/capycamp-rarity'
-import type { RarityTier } from '@/lib/capycamp-rarity'
-import {
-  persistProfileSnapshot,
-  restoreProfileIfNeeded,
-  type PersistedProfile,
-} from '@/lib/profile-local-storage'
 import {
   Dialog,
   DialogContent,
@@ -23,22 +17,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-
-type ProfileStatus = {
-  wallet: string
-  pfp_image?: string | null
-  pfp_token_id?: string | null
-  pfp_contract?: string | null
-  pfp_rarity?: RarityTier
-  pfp_traits?: { hat: string; outfit: string; background: string }
-  pfp_power_level?: number
-}
 
 function NftCardBack({ nft }: { nft: CapyNft }) {
   const rows = nft.allTraits?.length
@@ -106,66 +84,10 @@ function NftCardBack({ nft }: { nft: CapyNft }) {
 }
 
 export function CapyNFTGallery() {
-  const { address, isConnected } = useAccount()
+  const { isConnected } = useAccount()
   const { nfts, loading, error } = useCapyNFTs()
-  const [profile, setProfile] = useState<ProfileStatus | null>(null)
-  const [savingToken, setSavingToken] = useState<string | null>(null)
   const [expandedNft, setExpandedNft] = useState<CapyNft | null>(null)
   const [detailFlipped, setDetailFlipped] = useState(false)
-
-  useEffect(() => {
-    if (!address) {
-      setProfile(null)
-      return
-    }
-
-    let cancelled = false
-    const load = async () => {
-      try {
-        const data = (await restoreProfileIfNeeded(address)) as ProfileStatus
-        if (!cancelled) setProfile(data)
-      } catch {
-        // ignore
-      }
-    }
-    void load()
-
-    return () => {
-      cancelled = true
-    }
-  }, [address])
-
-  const equippedTokenId = profile?.pfp_token_id ?? null
-
-  const handleSetPfp = async (nft: CapyNft) => {
-    if (!address || !isConnected) return
-    if (savingToken === nft.tokenId) return
-
-    try {
-      setSavingToken(nft.tokenId)
-      const res = await fetch('/api/profile/set-pfp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wallet: address,
-          tokenId: nft.tokenId,
-          image: nft.image,
-          contract: nft.contract,
-        }),
-      })
-      const body = await res.json()
-      if (!res.ok) {
-        console.error('Failed to set PFP:', body?.error || body)
-        return
-      }
-      setProfile(body as ProfileStatus)
-      persistProfileSnapshot(address, body as PersistedProfile)
-    } catch (e) {
-      console.error('Failed to set PFP', e)
-    } finally {
-      setSavingToken(null)
-    }
-  }
 
   const openDetail = (nft: CapyNft) => {
     setExpandedNft(nft)
@@ -180,13 +102,13 @@ export function CapyNFTGallery() {
   return (
     <section className="space-y-3 sm:space-y-4">
       <h2 className="text-base font-extrabold uppercase tracking-[0.15em] text-slate-700 sm:text-lg sm:tracking-[0.2em]">
-        Capycampers
+        Collection
       </h2>
 
       <div className="space-y-3 rounded-2xl border-3 border-blue-200 bg-white/80 p-4 shadow-[0_14px_30px_rgba(15,23,42,0.25)] sm:p-5">
         {!isConnected && (
           <p className="text-xs text-slate-600 sm:text-sm">
-            Connect your wallet to see your Capycampers and set your profile avatar.
+            Connect your wallet to see your Capycampers.
           </p>
         )}
 
@@ -204,111 +126,24 @@ export function CapyNFTGallery() {
 
         {isConnected && !loading && nfts.length === 0 && (
           <p className="text-xs text-slate-700 sm:text-sm">
-            You need a CapyCamp NFT to unlock your Camper avatar 🏕️
+            You don&apos;t have any CapyCamp NFTs in this wallet yet.
           </p>
-        )}
-
-        {profile?.pfp_token_id && profile.pfp_rarity && (
-          <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50/80 p-3 text-xs sm:text-sm">
-            <div className="font-extrabold uppercase tracking-wide text-emerald-800">
-              Equipped camper
-            </div>
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              <div>
-                <span className="text-slate-600">Power level</span>{' '}
-                <span className="font-bold text-slate-900">{profile.pfp_power_level ?? '—'}</span>
-              </div>
-              <div>
-                <span className="text-slate-600">Rarity</span>{' '}
-                <span className="font-bold text-slate-900">
-                  {rarityLabel(profile.pfp_rarity)}
-                </span>
-              </div>
-              <div className="sm:col-span-2">
-                <div className="text-[11px] font-semibold uppercase text-slate-500">Traits</div>
-                <ul className="mt-1 flex flex-wrap gap-2">
-                  <li className="rounded-lg bg-white/90 px-2 py-1 shadow-sm">
-                    <span className="text-slate-500">Hat</span>{' '}
-                    <span className="font-medium text-slate-900">
-                      {profile.pfp_traits?.hat ?? '—'}
-                    </span>
-                  </li>
-                  <li className="rounded-lg bg-white/90 px-2 py-1 shadow-sm">
-                    <span className="text-slate-500">Outfit</span>{' '}
-                    <span className="font-medium text-slate-900">
-                      {profile.pfp_traits?.outfit ?? '—'}
-                    </span>
-                  </li>
-                  <li className="rounded-lg bg-white/90 px-2 py-1 shadow-sm">
-                    <span className="text-slate-500">Background</span>{' '}
-                    <span className="font-medium text-slate-900">
-                      {profile.pfp_traits?.background ?? '—'}
-                    </span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
         )}
 
         {nfts.length > 0 && (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4">
             {nfts.map((nft) => {
-              const isEquipped = equippedTokenId === nft.tokenId
-              const isSaving = savingToken === nft.tokenId
               const glow = rarityGlowClass(nft.rarity)
 
               return (
                 <div
                   key={`${nft.contract}-${nft.tokenId}`}
-                  className={[
-                    'relative flex flex-col rounded-2xl border-2 bg-slate-50/90 text-center shadow-sm transition-shadow hover:shadow-md',
-                    isEquipped
-                      ? 'border-emerald-400 bg-emerald-50/90 ring-1 ring-emerald-300/50'
-                      : 'border-slate-200',
-                  ].join(' ')}
+                  className="relative flex flex-col rounded-2xl border-2 border-slate-200 bg-slate-50/90 text-center shadow-sm transition-shadow hover:shadow-md"
                 >
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="NFT actions"
-                        className="absolute right-1 top-1 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-700 shadow-md outline-none hover:bg-white hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-500"
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-44">
-                      <DropdownMenuItem
-                        className="gap-2"
-                        onSelect={(e) => {
-                          e.preventDefault()
-                          void handleSetPfp(nft)
-                        }}
-                        disabled={isSaving}
-                      >
-                        <UserCircle2 className="h-4 w-4" />
-                        {isSaving ? 'Setting…' : 'Set as PFP'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        disabled
-                        className="gap-2 text-slate-400"
-                      >
-                        <Tent className="h-4 w-4 opacity-50" />
-                        Send to camp
-                        <span className="ml-auto text-[10px] font-normal uppercase text-slate-400">
-                          Soon
-                        </span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
                   <button
                     type="button"
                     onClick={() => openDetail(nft)}
-                    className="flex w-full flex-col items-center gap-1 rounded-2xl px-2 pb-3 pt-9 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
+                    className="flex w-full flex-col items-center gap-1 rounded-2xl px-2 pb-3 pt-3 outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50"
                   >
                     <span
                       className={`rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide sm:text-[9px] ${RARITY_BADGE_CLASSES[nft.rarity]}`}
@@ -336,11 +171,6 @@ export function CapyNFTGallery() {
                       <span className="text-slate-500">Power</span>
                       <span className="text-sky-800 tabular-nums">{nft.powerLevel}</span>
                     </span>
-                    {isEquipped && (
-                      <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                        Equipped
-                      </span>
-                    )}
                     <span className="text-[9px] font-medium text-slate-400">
                       Tap to expand
                     </span>
@@ -416,7 +246,7 @@ export function CapyNFTGallery() {
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+                <div className="mt-4 flex justify-center">
                   <Button
                     type="button"
                     variant="outline"
@@ -427,17 +257,6 @@ export function CapyNFTGallery() {
                       className={`h-4 w-4 transition-transform duration-500 ${detailFlipped ? 'rotate-180' : ''}`}
                     />
                     {detailFlipped ? 'Show front' : 'Flip card — all traits'}
-                  </Button>
-                  <Button
-                    type="button"
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                    disabled={savingToken === expandedNft.tokenId}
-                    onClick={() => void handleSetPfp(expandedNft)}
-                  >
-                    <UserCircle2 className="h-4 w-4" />
-                    {savingToken === expandedNft.tokenId
-                      ? 'Setting…'
-                      : 'Set as PFP'}
                   </Button>
                 </div>
               </div>

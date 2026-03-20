@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { CAMP_WALLPAPER_BASE } from '@/lib/camp-wallpaper-style'
 
 const LOADING_DURATION_MS = 5000
 const INTRO_AUDIO_SRC = '/intro.mp3'
@@ -48,12 +49,7 @@ export function LoadingScreen({ onComplete }: { onComplete: () => void }) {
       tabIndex={tapForSound ? 0 : undefined}
       onClick={handleScreenTap}
       onKeyDown={tapForSound ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playIntro() } } : undefined}
-      style={{
-        backgroundImage: "url('/background.png')",
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
+      style={CAMP_WALLPAPER_BASE}
     >
       {/* Subtle overlay for readability */}
       <div className="absolute inset-0 bg-black/20" />

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter, usePathname } from 'next/navigation'
 import { BottomDock } from './BottomDock'
 import { ConnectWallet } from '@/components/ConnectWallet'
+import { CAMP_WALLPAPER_BASE } from '@/lib/camp-wallpaper-style'
 export function CapyCampLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -19,10 +20,7 @@ export function CapyCampLayout({ children }: { children: React.ReactNode }) {
         isBrand
           ? undefined
           : {
-              backgroundImage: "url('/background.png')",
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
+              ...CAMP_WALLPAPER_BASE,
               backgroundAttachment: 'fixed',
             }
       }
