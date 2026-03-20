@@ -19,12 +19,16 @@ export async function POST(request: Request) {
   }
 
   const patch: Record<string, unknown> = { wallet }
+  const existing = getProfile(wallet)
 
   if (typeof body?.display_name === 'string') {
     patch.display_name = body.display_name.trim().slice(0, 48) || undefined
   }
   if (typeof body?.xp === 'number' && body.xp >= 0) {
-    patch.xp = body.xp
+    patch.xp = Math.max(existing?.xp ?? 0, body.xp)
+  }
+  if (typeof body?.last_claim === 'number' && body.last_claim >= 0) {
+    patch.last_claim = Math.max(existing?.last_claim ?? 0, body.last_claim)
   }
   if (body?.pfp_image !== undefined) {
     patch.pfp_image = body.pfp_image

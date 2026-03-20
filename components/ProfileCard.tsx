@@ -32,6 +32,11 @@ import {
   restoreProfileIfNeeded,
   type PersistedProfile,
 } from '@/lib/profile-local-storage'
+import {
+  applyXpClaimToSnapshot,
+  xpClaimRequestBody,
+  type XpClaimApiResponse,
+} from '@/lib/xp-claim-client'
 import { BADGES } from '@/lib/badges'
 
 type AbstractPortalProfile = {
@@ -207,28 +212,35 @@ export function ProfileCard() {
       const profile = statusRes.ok ? await statusRes.json() : {}
       const rewards = rewardsRes.ok ? await rewardsRes.json() : {}
       const xpFromProfile = typeof profile.xp === 'number' ? profile.xp : 0
-      setTotalXp(xpFromProfile)
+      const localSnap = readProfileSnapshot(address)
+      const localXp = typeof localSnap?.xp === 'number' ? localSnap.xp : 0
+      setTotalXp(Math.max(xpFromProfile, localXp))
       setStreak(rewards.streak ?? 0)
       setHasClaimedToday(rewards.hasClaimedToday ?? false)
-      if (xpFromProfile > 0) {
-        persistProfileSnapshot(address, { ...(readProfileSnapshot(address) || {}), wallet: address, xp: xpFromProfile })
+      if (Math.max(xpFromProfile, localXp) > 0) {
+        persistProfileSnapshot(address, {
+          ...(readProfileSnapshot(address) || {}),
+          wallet: address,
+          xp: Math.max(xpFromProfile, localXp),
+        })
       }
       const claimRes = await fetch('/api/xp/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet: address }),
+        body: JSON.stringify(xpClaimRequestBody(address)),
       })
-      const claimData = claimRes.ok ? await claimRes.json() : {}
+      const claimData = claimRes.ok ? ((await claimRes.json()) as XpClaimApiResponse) : {}
       if (cancelled) return
+      applyXpClaimToSnapshot(address, claimData)
+      const mergedXp = readProfileSnapshot(address)?.xp
       if (claimData.claimed && typeof claimData.xpGained === 'number') {
-        const newTotal = claimData.totalXp ?? 0
-        setTotalXp(newTotal)
+        setTotalXp(typeof mergedXp === 'number' ? mergedXp : (claimData.totalXp ?? 0))
         setXpJustClaimed(claimData.xpGained)
-        persistProfileSnapshot(address, { ...(readProfileSnapshot(address) || {}), wallet: address, xp: newTotal })
         window.setTimeout(() => setXpJustClaimed(0), 2500)
+      } else if (typeof mergedXp === 'number') {
+        setTotalXp(mergedXp)
       } else if (typeof claimData.totalXp === 'number') {
         setTotalXp(claimData.totalXp)
-        persistProfileSnapshot(address, { ...(readProfileSnapshot(address) || {}), wallet: address, xp: claimData.totalXp })
       }
     }
     void run()

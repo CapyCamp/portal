@@ -26,12 +26,23 @@ export async function GET(request: Request) {
   const record = getDailyClaim(address) || { address, lastClaimDate: '', streak: 0 }
   const profile = getProfile(wallet)
 
+  const clientLastRaw = searchParams.get('clientLastClaim')
+  const clientXpRaw = searchParams.get('clientXp')
+  const clientLastParsed =
+    clientLastRaw != null && clientLastRaw !== '' ? Number(clientLastRaw) : Number.NaN
+  const clientXpParsed =
+    clientXpRaw != null && clientXpRaw !== '' ? Number(clientXpRaw) : Number.NaN
+  const clientLastMs =
+    Number.isFinite(clientLastParsed) && clientLastParsed >= 0 ? clientLastParsed : 0
+  const clientXpHint =
+    Number.isFinite(clientXpParsed) && clientXpParsed >= 0 ? clientXpParsed : 0
+
   const hasClaimedToday = record.lastClaimDate === today
   const nextReset = getNextUtcMidnight()
   const now = new Date()
   const msUntilReset = Math.max(0, nextReset.getTime() - now.getTime())
 
-  const lastDailyXpClaim = profile?.last_claim ?? 0
+  const lastDailyXpClaim = Math.max(profile?.last_claim ?? 0, clientLastMs)
   const DAILY_XP_COOLDOWN_MS = 24 * 60 * 60 * 1000
   const nextDailyXpAt = lastDailyXpClaim > 0 ? lastDailyXpClaim + DAILY_XP_COOLDOWN_MS : 0
   const secondsUntilDailyXp =
@@ -40,7 +51,7 @@ export async function GET(request: Request) {
   let xpPerDay = 0
   let nftCount = 0
   try {
-    const nfts = await getCapyCampNftsForOwner(address, { limit: 100 })
+    const nfts = await getCapyCampNftsForOwner(address, { limit: 200 })
     nftCount = nfts.length
     xpPerDay = nfts.reduce(
       (sum, nft) => sum + (XP_REWARDS[nft.rarity as RarityTier] ?? 0),
@@ -59,7 +70,7 @@ export async function GET(request: Request) {
     xpBoostPercent: profile?.xp_boost_percent ?? 0,
     camperPerkActive: (profile?.xp_boost_percent ?? 0) > 0,
     equippedRarity: profile?.pfp_rarity ?? null,
-    totalXp: profile?.xp ?? 0,
+    totalXp: Math.max(profile?.xp ?? 0, clientXpHint),
     lastClaim: lastDailyXpClaim,
     nextDailyXpAt,
     secondsUntilDailyXp,

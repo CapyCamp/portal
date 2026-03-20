@@ -6,6 +6,12 @@ import { Gift, Flame, Sparkles, Clock } from 'lucide-react'
 import { rarityLabel } from '@/lib/capycamp-rarity'
 import type { RarityTier } from '@/lib/capycamp-rarity'
 import { restoreProfileIfNeeded } from '@/lib/profile-local-storage'
+import {
+  applyXpClaimToSnapshot,
+  rewardsStatusUrlForWallet,
+  xpClaimRequestBody,
+  type XpClaimApiResponse,
+} from '@/lib/xp-claim-client'
 
 type RewardsStatus = {
   address: string
@@ -42,7 +48,7 @@ export function DailyRewardsCard() {
       setLoading(true)
       setError(null)
       await restoreProfileIfNeeded(addr)
-      const res = await fetch(`/api/rewards/status?address=${encodeURIComponent(addr)}`)
+      const res = await fetch(rewardsStatusUrlForWallet(addr))
       if (!res.ok) {
         const data = await res.json().catch(() => null)
         throw new Error(data?.error || 'Failed to load rewards status')
@@ -108,12 +114,13 @@ export function DailyRewardsCard() {
       const res = await fetch('/api/xp/claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet: address }),
+        body: JSON.stringify(xpClaimRequestBody(address)),
       })
-      const data = await res.json()
+      const data = (await res.json()) as XpClaimApiResponse
       if (!res.ok) {
         throw new Error(data?.error || 'Unable to claim')
       }
+      applyXpClaimToSnapshot(address, data)
       if (data.claimed && typeof data.xpGained === 'number') {
         setLastHoldingsClaim(data.xpGained)
         setSecondsUntilDailyXp(data.nextClaimAt ? Math.max(0, Math.floor((data.nextClaimAt - Date.now()) / 1000)) : null)

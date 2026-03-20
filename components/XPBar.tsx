@@ -60,7 +60,7 @@ export function XPBar() {
       const serverXp = typeof (result as { xp?: number }).xp === 'number' ? (result as { xp: number }).xp : null
       const localSnapshot = readProfileSnapshot(address)
       const localXp = typeof localSnapshot?.xp === 'number' ? localSnapshot.xp : null
-      const xpValue = serverXp ?? localXp ?? 0
+      const xpValue = Math.max(serverXp ?? 0, localXp ?? 0)
       if (!cancelled) {
         setXp(xpValue)
         if (xpValue > 0) {
@@ -71,11 +71,18 @@ export function XPBar() {
     void fetchXp()
     const t = window.setTimeout(() => void fetchXp(), 2000)
     const onFocus = () => void fetchXp()
+    const onXpUpdated = () => {
+      const snap = readProfileSnapshot(address)
+      const v = typeof snap?.xp === 'number' ? snap.xp : null
+      if (v != null) setXp(v)
+    }
     window.addEventListener('focus', onFocus)
+    window.addEventListener('capycamp-xp-updated', onXpUpdated)
     return () => {
       cancelled = true
       window.clearTimeout(t)
       window.removeEventListener('focus', onFocus)
+      window.removeEventListener('capycamp-xp-updated', onXpUpdated)
     }
   }, [address])
 

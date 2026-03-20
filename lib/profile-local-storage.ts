@@ -19,6 +19,8 @@ export type PersistedProfile = {
   pfp_power_level?: number
   xp_boost_percent?: number
   xp?: number
+  /** Last daily holdings XP claim (ms), mirrored from server + local merge for serverless reliability */
+  last_claim?: number
   claimed_badges?: string[]
 }
 
